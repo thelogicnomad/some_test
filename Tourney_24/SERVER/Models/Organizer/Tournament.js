@@ -64,6 +64,12 @@ const TournamentSchema = new mongoose.Schema({
             ref: 'team' 
         }
     ],
+    fixtures: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'fixture'
+        }
+    ],
     settings: {
         name:String,
         url: String,

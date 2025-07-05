@@ -3,6 +3,7 @@
 // import playerRoutes from './Routes/Player/playerRoutes.js';
 import bookingRoutes from './Routes/Player/bookingRoutes.js';
 import organizerRoutes from './Routes/Organizer/organizerRoutes.js';
+import fixtureRoutes from './Routes/Organizer/fixtureRoutes.js';
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
@@ -49,6 +50,7 @@ connectMongoDB(process.env.MONGODB_URI).then(()=>{
 
 app.use('/api/player/bookings', bookingRoutes);
 app.use('/api/organizer', organizerRoutes);
+app.use('/api/organizer/fixtures', fixtureRoutes);
 
   
 

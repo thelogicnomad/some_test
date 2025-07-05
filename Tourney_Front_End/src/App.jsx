@@ -46,7 +46,7 @@ const App = () => {
         <Route path='/organizer/home' element={<OrganizerHome/>}/>
         <Route path='/organizer/tournaments' element={<OrganizerTournament/>}/>
         <Route path='/organizer/createTournament' element={<CreateTournament/>}/>
-        <Route path='/organizer/tournament/id' element={<Tournament/>}/>
+        <Route path='/organizer/tournament/:id' element={<Tournament/>}/>
 
 
         {/* Auth Routes */}

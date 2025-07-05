@@ -1,19 +1,41 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useParams } from 'react-router-dom';
+import { fetchTeams } from '../../lib/api.js';
 import { Plus, Trash2, RotateCcw, Trophy, Users, User } from 'lucide-react';
 
 const TournamentBracket = () => {
   const [competitionType, setCompetitionType] = useState('teams');
-  const [teams, setTeams] = useState([
-    'The Leons', 'Team Alpha', 'Team Beta', 'Team Gamma', 
-    'Team Delta', 'Team Epsilon', 'Team Zeta', 'Team Theta'
-  ]);
+  const [teams, setTeams] = useState([]);
+  // Fetch teams from backend
+  const { tournamentId, id } = useParams();
+  const tid = tournamentId || id;
+// simple 24-hex check for MongoDB ObjectId
+const isValidObjectId = (val) => /^[a-f\d]{24}$/i.test(val);
+  useEffect(() => {
+    if (!tid || !isValidObjectId(tid)) {
+      console.warn('Invalid tournament id – using local state only');
+      return;
+    }
+    (async () => {
+      try {
+        const teamDocs = await fetchTeams(tid);
+        setTeams(teamDocs.map((t) => t.name));
+      } catch (err) {
+        // keep existing teams list untouched (could be empty)
+        setLoadError(true);
+        console.error('Failed to load teams', err);
+      }
+    })();
+  }, [tid]);
+
   const [playerPairs, setPlayerPairs] = useState([
     { player1: 'John Smith', player2: 'Jane Doe' },
     { player1: 'Mike Johnson', player2: 'Sarah Wilson' },
     { player1: 'David Brown', player2: 'Lisa Davis' },
     { player1: 'Tom Anderson', player2: 'Emma Taylor' }
   ]);
-  
+
+  const [loadError, setLoadError] = useState(false);
   const [bracket, setBracket] = useState([]);
   const [winners, setWinners] = useState({});
   const [newTeamName, setNewTeamName] = useState('');
