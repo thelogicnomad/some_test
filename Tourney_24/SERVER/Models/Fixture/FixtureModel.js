@@ -37,15 +37,21 @@ const FixtureSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    event: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'event', // optional reference if you separate events/categories
+    },
     teamA: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'team',
-      required: true,
+      required: false,
+      default: null,
     },
     teamB: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'team',
-      required: true,
+      required: false,
+      default: null,
     },
     scheduledAt: {
       type: Date,

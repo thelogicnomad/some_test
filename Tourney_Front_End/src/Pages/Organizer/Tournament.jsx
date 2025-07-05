@@ -8,7 +8,7 @@ import Notification from './Notification';
 import Payments from './Payments';
 import Scores from './Scores';
 import Settings from './Settings';
-import Fixtures from './Fixtures';
+import Fixtures from './Fixtures.jsx';
 
 
 const Tournament = () => {

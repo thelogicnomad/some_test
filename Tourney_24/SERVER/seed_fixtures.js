@@ -1,16 +1,32 @@
-// seed_fixtures.js - script to seed sample tournament, teams and (optionally) fixtures
+// seed_test_data.js
 import mongoose from 'mongoose';
 import 'dotenv/config';
 import { connectMongoDB } from './Config/Connection.js';
 import Tournament from './Models/Organizer/Tournament.js';
 import Team from './Models/Team/TeamModel.js';
 
-// Update MONGODB_URI in your .env or fallback to local
-const DB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/Tourney';
+const organizerId = process.argv[2];         // passed on CLI
+if (!organizerId) {
+  console.error('Usage: node seed_test_data.js <organizerId>');
+  process.exit(1);
+}
 
-// Hard-coded data that matches the default state in the React Fixtures page
+const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/Tourney';
+
+// ---------- sample data ----------
+const TOURNAMENT_DATA = {
+  name: 'Test Cup 2025',
+  description: 'Seeded via seed_test_data.js',
+  coverImage: 'https://via.placeholder.com/300x200.png',
+  startDate: new Date('2025-08-01'),
+  endDate:   new Date('2025-09-01'),
+  location: 'National Stadium',
+  sport: 'Football (5-a-side)',
+  organization: organizerId,
+  totalPlayers: 0
+};
+
 const TEAM_NAMES = [
-  'The Leons',
   'Team Alpha',
   'Team Beta',
   'Team Gamma',
@@ -18,47 +34,33 @@ const TEAM_NAMES = [
   'Team Epsilon',
   'Team Zeta',
   'Team Theta',
+  'Team Omega',
+  'Team Phi',
+  'Team Chi',
+  'Team Psi',
+  'Team Omega',
 ];
+// ----------------------------------
 
 (async () => {
-  try {
-    // connect
-    await connectMongoDB(DB_URI);
-    console.log('Connected to MongoDB');
+  await connectMongoDB(uri);
+  console.log('Connected to MongoDB');
 
-    // 🔄 Clear previous seed (optional)
-    await Promise.all([
-      Tournament.deleteMany({ name: 'Sample Tournament – Fixtures Demo' }),
-      Team.deleteMany({})
-    ]);
+  // 1) create tournament
+  const tournament = await Tournament.create(TOURNAMENT_DATA);
 
-    // 1️⃣ Create tournament
-    const tournament = await Tournament.create({
-      name: 'Sample Tournament – Fixtures Demo',
-      description: 'Demo tournament seeded via seed_fixtures.js',
-      coverImage: 'https://res.cloudinary.com/demo/image/upload/v1710000000/tourney_cover.jpg',
-      startDate: new Date('2025-08-01'),
-      endDate: new Date('2025-09-01'),
-      location: 'Virtual Arena',
-      sport: 'Football (5-a-side)',
-      organization: new mongoose.Types.ObjectId('65d000000000000000000000'), // Replace with real organizer id if needed
-      totalPlayers: 0,
-    });
+  // 2) insert teams
+  const teams = await Team.insertMany(
+    TEAM_NAMES.map((name) => ({ name, tournament: tournament._id }))
+  );
 
-    // 2️⃣ Insert teams and link to tournament
-    const teamsDocs = await Team.insertMany(
-      TEAM_NAMES.map((name) => ({ name, tournament: tournament._id }))
-    );
+  // 3) attach team ids to tournament
+  tournament.teams = teams.map((t) => t._id);
+  await tournament.save();
 
-    // 3️⃣ Store team ids inside tournament.teams
-    tournament.teams = teamsDocs.map((t) => t._id);
-    await tournament.save();
+  console.log('\n✅ Seed complete');
+  console.log('Tournament id:', tournament._id);
+  console.log('Team ids:', tournament.teams);
 
-    console.log(`Seeded tournament "${tournament.name}" (_id=${tournament._id}) with ${teamsDocs.length} teams.`);
-  } catch (err) {
-    console.error('❌ Seed failed:', err);
-  } finally {
-    await mongoose.disconnect();
-    console.log('Disconnected');
-  }
+  await mongoose.disconnect();
 })();

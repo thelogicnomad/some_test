@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { fetchTeams } from '../../lib/api.js';
+import { fetchTeams, fetchFixtures, generateFixtures, updateFixture } from '../../lib/api.js';
 import { Plus, Trash2, RotateCcw, Trophy, Users, User } from 'lucide-react';
 
 const TournamentBracket = () => {
@@ -28,6 +28,64 @@ const isValidObjectId = (val) => /^[a-f\d]{24}$/i.test(val);
     })();
   }, [tid]);
 
+  // Fetch fixtures and build bracket structure from backend
+  useEffect(() => {
+    if (!tid || !isValidObjectId(tid)) return;
+
+    (async () => {
+      try {
+        let fixtures = await fetchFixtures(tid);
+        if (!Array.isArray(fixtures) || !fixtures.length) {
+          // generate on the fly
+          fixtures = await generateFixtures(tid);
+        }
+        if (!fixtures.length) return;
+
+        const map = {};
+        const roundsObj = {};
+        const initialWinners = {};
+
+        fixtures.forEach((fx) => {
+          const matchId = `round${fx.round}_match${fx.matchIndex}`;
+          map[matchId] = fx;
+
+          const p1 = fx.teamA ? fx.teamA.name : null;
+          const p2 = fx.teamB ? fx.teamB.name : null;
+
+          if (!roundsObj[fx.round]) roundsObj[fx.round] = [];
+          roundsObj[fx.round].push({
+            id: matchId,
+            participant1: p1,
+            participant2: p2,
+            round: fx.round,
+            matchIndex: fx.matchIndex,
+          });
+
+          if (fx.winner && fx.winner.name) {
+            initialWinners[matchId] = fx.winner.name;
+          }
+        });
+
+        const totalRounds = Object.keys(roundsObj).length;
+        const bracketArr = Object.keys(roundsObj)
+          .sort((a, b) => a - b)
+          .map((roundNum) => ({
+            roundNumber: Number(roundNum),
+            roundName: getRoundName(Number(roundNum), totalRounds),
+            matches: roundsObj[roundNum].sort((a, b) => a.matchIndex - b.matchIndex),
+          }));
+
+        if (bracketArr.length) {
+          setBracket(bracketArr);
+        }
+        setFixtureMap(map);
+        setWinners((prev) => ({ ...prev, ...initialWinners }));
+      } catch (err) {
+        console.error('Failed to load fixtures', err);
+      }
+    })();
+  }, [tid]);
+
   const [playerPairs, setPlayerPairs] = useState([
     { player1: 'John Smith', player2: 'Jane Doe' },
     { player1: 'Mike Johnson', player2: 'Sarah Wilson' },
@@ -37,6 +95,8 @@ const isValidObjectId = (val) => /^[a-f\d]{24}$/i.test(val);
 
   const [loadError, setLoadError] = useState(false);
   const [bracket, setBracket] = useState([]);
+  // Map of matchId -> fixture document for quick lookup when saving
+  const [fixtureMap, setFixtureMap] = useState({});
   const [winners, setWinners] = useState({});
   const [newTeamName, setNewTeamName] = useState('');
   const [newPlayer1, setNewPlayer1] = useState('');
@@ -108,32 +168,51 @@ const isValidObjectId = (val) => /^[a-f\d]{24}$/i.test(val);
     return `Round ${roundNum + 1}`;
   };
 
-  // Generate bracket when participants change
+  // Generate bracket when participants change (only if no backend fixtures)
   useEffect(() => {
+    if (Object.keys(fixtureMap).length) return;
     const newBracket = generateBracket(currentParticipants);
     setBracket(newBracket);
     setWinners({});
-  }, [currentParticipants, generateBracket]);
+  }, [currentParticipants, generateBracket, fixtureMap]);
 
-  // Handle winner selection
-  const selectWinner = useCallback((matchId, winner, match) => {
-    const newWinners = { ...winners };
-    
-    // If clicking same winner, deselect
-    if (newWinners[matchId] === winner) {
-      delete newWinners[matchId];
-      clearSubsequentWinners(match, newWinners);
-    } else {
-      // Clear any subsequent winners if changing selection
-      if (newWinners[matchId]) {
+  // Handle winner selection and persist to backend
+  const selectWinner = useCallback(
+    async (matchId, winnerName, match) => {
+      const newWinners = { ...winners };
+
+      // Toggle winner selection
+      if (newWinners[matchId] === winnerName) {
+        delete newWinners[matchId];
         clearSubsequentWinners(match, newWinners);
+      } else {
+        if (newWinners[matchId]) {
+          clearSubsequentWinners(match, newWinners);
+        }
+        newWinners[matchId] = winnerName;
       }
-      newWinners[matchId] = winner;
-    }
-    
-    setWinners(newWinners);
-    updateNextRound(match, newWinners[matchId] || null);
-  }, [winners]);
+
+      setWinners(newWinners);
+      updateNextRound(match, newWinners[matchId] || null);
+
+      // Persist winner to backend if this match is linked to a fixture
+      try {
+        const fx = fixtureMap[matchId];
+        if (fx) {
+          const winnerId =
+            winnerName === (fx.teamA && fx.teamA.name)
+              ? fx.teamA._id
+              : fx.teamB?._id;
+          if (winnerId) {
+            await updateFixture(fx._id, { winner: winnerId, status: 'completed' });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to update fixture', err);
+      }
+    },
+    [winners, fixtureMap]
+  );
 
   // Clear winners in subsequent rounds
   const clearSubsequentWinners = (match, winnersObj) => {

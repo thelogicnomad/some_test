@@ -16,6 +16,7 @@ import OrganizerTournament from './Pages/Organizer/OrganizerTournament';
 import CreateTournament from './Pages/Organizer/CreateTournament';
 import Tournament from './Pages/Organizer/Tournament';
 import Events from './Pages/Organizer/Events';
+import Fixtures from './Pages/Organizer/Fixtures';
 
   import { ToastContainer, Bounce } from 'react-toastify';
 
@@ -47,6 +48,7 @@ const App = () => {
         <Route path='/organizer/tournaments' element={<OrganizerTournament/>}/>
         <Route path='/organizer/createTournament' element={<CreateTournament/>}/>
         <Route path='/organizer/tournament/:id' element={<Tournament/>}/>
+        <Route path='/organizer/tournament/:id/fixtures' element={<Fixtures/>}/>
 
 
         {/* Auth Routes */}
