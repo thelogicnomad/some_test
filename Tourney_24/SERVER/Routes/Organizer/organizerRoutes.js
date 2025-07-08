@@ -1,5 +1,5 @@
 import express from 'express';
-import { signUp, verifyEmailWithOTP, login, createTournament, getAllTournaments, getParticularTournament, getProfile, getDashboardStats, addMember, getOrganizationMembers, getAccessibleOrganizations, switchOrganization, createOrganization } from '../../Controllers/Organizers/OrganizerController.js';
+import { signUp, verifyEmailWithOTP, login, createTournament, getAllTournaments, getParticularTournament, getProfile, getDashboardStats, addMember, getOrganizationMembers, getAccessibleOrganizations, getCurrentOrganization, switchOrganization, createOrganization } from '../../Controllers/Organizers/OrganizerController.js';
 import { organizerAuthMidlleware } from '../../Middlewares/jwtAuth.js';
 
 const router = express.Router();
@@ -20,6 +20,7 @@ router.get('/tournament/:tournamentId', organizerAuthMidlleware, getParticularTo
 router.post('/add-member', organizerAuthMidlleware, addMember);
 router.get('/members', organizerAuthMidlleware, getOrganizationMembers);
 router.get('/accessible-organizations', organizerAuthMidlleware, getAccessibleOrganizations);
+router.get('/current-organization', organizerAuthMidlleware, getCurrentOrganization);
 router.post('/switch-organization', organizerAuthMidlleware, switchOrganization);
 router.post('/create-organization', organizerAuthMidlleware, createOrganization);
 

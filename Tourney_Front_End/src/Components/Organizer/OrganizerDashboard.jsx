@@ -251,16 +251,44 @@ const OrganizationHome = ()=>{
     country: 'IN'
   });
   
-  // Update form data when organizer data is available
+  // Local loading state while fetching organization info
+  const [orgLoading, setOrgLoading] = useState(true);
+  
+  // Fetch current organization info on mount
   useEffect(() => {
-    if (organizerData) {
-      setFormData({
-        organizationName: organizerData.organizationName || '',
-        email: organizerData.email || '',
-        mobile: organizerData.organizationPhone || '',
-        country: organizerData.country || 'IN'
-      });
-    }
+    const fetchCurrentOrg = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/api/organizer/current-organization', {
+          method: 'GET',
+          credentials: 'include'
+        });
+        const data = await res.json();
+        if (data.success) {
+          setFormData(prev => ({
+            ...prev,
+            organizationName: data.organization.organizationName || '',
+            email: data.organization.email || '',
+            mobile: data.organization.organizationPhone || '',
+            country: data.organization.country || 'IN'
+          }));
+          setOrgLoading(false);
+          return; // skip fallback below
+        }
+      } catch (e) {
+        console.error('Error fetching current organization', e);
+      }
+      // fallback to organizer profile data
+      if (organizerData) {
+        setFormData({
+          organizationName: organizerData.organizationName || '',
+          email: organizerData.email || '',
+          mobile: organizerData.organizationPhone || '',
+          country: organizerData.country || 'IN'
+        });
+        setOrgLoading(false);
+      }
+    };
+    fetchCurrentOrg();
   }, [organizerData]);
 
   const handleInputChange = (e) => {
@@ -272,10 +300,10 @@ const OrganizationHome = ()=>{
   };
 
   // Check if user has organization details
-  const hasOrganizationDetails = organizerData && (organizerData.organizationName && organizerData.organizationName.trim() !== '');
+  const hasOrganizationDetails = formData.organizationName && formData.organizationName.trim() !== '';
   
   // If user doesn't have organization details, show empty state
-  if (!loading && !hasOrganizationDetails) {
+  if (!loading && !orgLoading && !hasOrganizationDetails) {
     return (
       <div className="organization-form-container">
         <div className="form-header">
@@ -293,7 +321,7 @@ const OrganizationHome = ()=>{
 
 
     // Show loading state
-    if (loading) {
+    if (loading || orgLoading) {
       return (
         <div className="organization-form-container">
           <div className="form-header">

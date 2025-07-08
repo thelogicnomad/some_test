@@ -595,7 +595,7 @@ const getAccessibleOrganizations = async (req, res) => {
             email: org.email,
             phone: org.organizationPhone || '',
             role: org._id.toString() === userId.toString() ? 'owner' : 'accessible',
-            isActive: org._id.toString() === userId.toString()
+            isActive: user.currentOrganizationContext ? (org._id.toString() === user.currentOrganizationContext.toString()) : (org._id.toString() === userId.toString())
         }));
         
         return res.json({ 
@@ -707,4 +707,25 @@ const createOrganization = async (req, res) => {
     }
 };
 
-export {signUp,verifyEmailWithOTP,login,createTournament,getAllTournaments,getParticularTournament,getProfile,getDashboardStats,addMember,getOrganizationMembers,getAccessibleOrganizations,switchOrganization,createOrganization};
+// Get current organization info
+const getCurrentOrganization = async (req, res) => {
+    try {
+        const user = await Organizer.findById(req.organizer).select('currentOrganizationContext');
+        if (!user || !user.currentOrganizationContext) {
+            return res.json({ success: false, message: 'No organization selected' });
+        }
+
+        const org = await Organizer.findById(user.currentOrganizationContext)
+            .select('organizationName organizationPhone email role addedAt country');
+        if (!org) {
+            return res.json({ success: false, message: 'Organization not found' });
+        }
+
+        return res.json({ success: true, organization: org });
+    } catch (error) {
+        console.log('Error in getCurrentOrganization:', error);
+        return res.json({ success: false, message: 'Error fetching organization' });
+    }
+};
+
+export {signUp,verifyEmailWithOTP,login,createTournament,getAllTournaments,getParticularTournament,getProfile,getDashboardStats,addMember,getOrganizationMembers,getAccessibleOrganizations,switchOrganization,createOrganization,getCurrentOrganization};
